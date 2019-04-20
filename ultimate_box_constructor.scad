@@ -34,7 +34,8 @@ internal_sections = [
                     //of the section  | sections are |         |         |
                     //                | alligned     |         |         |
                     //                | with x)      |         |         |
-                        [ [0.5, 0.5],   90,             20,       1 ]
+                        [ [0.5, 0.5],   90,             200,       1 ],
+                        [ [0.5, 0.5],   0 ,             200,       0.9 ]
                     ];
 
 //////////////////////////////////////////////////////////////////
@@ -57,7 +58,7 @@ body_size_z = lid ? overall_size_z - roundness*body_roundness_reducer_multiplyer
 
 body_internal_size_x = body_size_x - roundness*2;
 body_internal_size_y = body_size_y - roundness*2;
-body_internal_size_z = body_size_z - roundness;
+body_internal_size_z = body_size_z - wall_thickness;
 
 body_internal_space = [0, 0, wall_thickness];
 
@@ -66,29 +67,59 @@ lid_size_y = overall_size_y + wall_thickness*2 + lid_gap;
 lid_size_z = overall_size_z*lid_size_ratio;
 
 lid_shift = [(overall_size_x)*1.5, 0, 0];
+//lid_shift = [0, 0, 0];
 
 //////////////////////////////////////////////////////////////////
 ////****EXECUTION PART*****///////////////////////////////////////
 //////////////////////////////////////////////////////////////////
 
-module create_internal_section(x, y, th, a, h){
-    echo(x);
-    echo(y);
-    echo(h);
-    cube([x, y, h]);
+//body cube with roundness
+module rounded_cube(__x, __y, __z, __r){
+    translate([0, 0, __r]){
+        minkowski(){
+            translate([0, 0, (__z*1.1+__r)/2]){
+                    cube([__x - __r*2,
+                  __y - __r*2,
+                  __z*1.1+__r], center=true);
+            }
+            roundness_object();
+        }
+    }
 }
 
-module internal_sections(_internal_sections){
-    for (s = _internal_sections){
+module inverse_rounded_cube(__x, __y, __z, __r){
+    difference(){
+        cube(__x*4, __y*4, __z*4, center = true);
+        rounded_cube(__x, __y, __z, __r);
+    }
+}
+
+module top_cut(__x, __y, __z){
+    translate([0, 0, __z]){
+        _z_size = __z*2;
+
+        translate ([0,0, (_z_size)/2]) cube([__x*3, __y*3, _z_size], center=true);
+    }
+}
+
+module internal_sections(__internal_sections){
+    for (s = __internal_sections){
         if (s[0] != undef){
+            echo(body_internal_size_z);
             section_height = body_internal_size_z*s[3];
             section_width = internal_sections_thickness;
             section_length = s[2];
-            translate(body_internal_space){
-                rotate(a = s[1], v = [0,0,1]){
-                    translate([0, 0, section_height/2]) {
-                        cube([section_length, section_width, section_height], center = true);
+            difference(){
+                translate(body_internal_space){
+                    rotate(a = s[1], v = [0,0,1]){
+                        translate([0, 0, section_height/2]) {
+                            cube([section_length, section_width, section_height], center = true);
+                        }
                     }
+                }
+                union(){
+                    top_cut(body_size_x, body_size_y, body_size_z);
+                    inverse_rounded_cube(body_size_x, body_size_y, body_size_z, roundness);
                 }
             }
         }
@@ -114,36 +145,11 @@ module roundness_object(){
     }
 }
 
-//body cube with roundness
-module rounded_cube(__x, __y, __z, __r){
-    translate([0, 0, __r]){
-        minkowski(){
-            translate([0, 0, (__z*1.1+roundness)/2]){
-                    cube([__x - roundness*2,
-                  __y - roundness*2,
-                  __z*1.1+roundness], center=true);
-            }
-            roundness_object();
-        }
-    }
-}
-
-//module inverse_rounded_cube/
-
-module top_cut(x, y, z){
-    translate([0, 0, z]){
-        _z_size = z*2;
-        
-        translate ([0,0, (_z_size)/2]) cube([x*3, y*3, _z_size], center=true);
-    }
-}
-
 module cup(x, y, z, shift = [0, 0, 0]){
     translate(shift){
         difference(){
             difference(){
-                rounded_cube(x, y, z);
-                //top cut
+                rounded_cube(x, y, z, roundness);
                 top_cut(x, y, z);
             }
             //inside cut
@@ -162,14 +168,16 @@ module cup(x, y, z, shift = [0, 0, 0]){
 }
 
 //body
-cup(body_size_x, body_size_y, body_size_z);
+//cup(body_size_x, body_size_y, body_size_z);
 
 //lid
-if (lid==1){
-    cup(lid_size_x, lid_size_y, lid_size_z, lid_shift);
-}
+//if (lid==1){
+//    cup(lid_size_x, lid_size_y, lid_size_z, lid_shift);
+//}
 
 //internal sections
-internal_sections(internal_sections);
+//internal_sections(internal_sections);
 
-top_cut(body_size_x, body_size_y, body_size_z);
+rounded_cube(100, 100, 100, 5);
+
+//top_cut(body_size_x, body_size_y, body_size_z);
