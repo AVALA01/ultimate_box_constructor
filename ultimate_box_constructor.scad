@@ -34,8 +34,8 @@ internal_sections = [
                     //of the section  | sections are |         |         |
                     //                | alligned     |         |         |
                     //                | with x)      |         |         |
-                        [ [0.5, 0.5],   90,             200,       1 ],
-                        [ [0.5, 0.5],   0 ,             200,       0.9 ]
+                        [ [0.5, 0.5],   90,             200,        1 ],
+                        [ [0.7, 0.7],   10 ,             10,       0.5 ]
                     ];
 
 //////////////////////////////////////////////////////////////////
@@ -54,34 +54,51 @@ body_roundness_reducer_multiplyer = 1;
 
 body_size_x = overall_size_x;
 body_size_y = overall_size_y;
-body_size_z = lid ? overall_size_z - roundness*body_roundness_reducer_multiplyer : overall_size_z;
+body_size_z = lid ? overall_size_z - roundness*body_roundness_reducer_multiplyer - wall_thickness : overall_size_z;
 
-body_internal_size_x = body_size_x - roundness*2;
-body_internal_size_y = body_size_y - roundness*2;
+body_internal_size_x = body_size_x - wall_thickness*2;
+body_internal_size_y = body_size_y - wall_thickness*2;
 body_internal_size_z = body_size_z - wall_thickness;
 
-body_internal_space = [0, 0, wall_thickness];
+main_body_internal_center = [body_internal_size_x/2.0,
+                             body_internal_size_y/2.0,
+                             body_internal_size_z/2.0];
 
 lid_size_x = overall_size_x + wall_thickness*2 + lid_gap;
 lid_size_y = overall_size_y + wall_thickness*2 + lid_gap;
 lid_size_z = overall_size_z*lid_size_ratio;
 
-lid_shift = [(overall_size_x)*1.5, 0, 0];
-//lid_shift = [0, 0, 0];
+module main_body_space(){
+    translate([wall_thickness+lid_gap, wall_thickness+lid_gap, 0]){
+        children();
+    }
+}
+
+module lid_space(){
+    translate([(overall_size_x)*1.5, 0, 0]){
+        children();
+    }
+}
+
+module main_body_internal_space(){
+    main_body_space(){
+        translate([wall_thickness, wall_thickness, wall_thickness]){
+            children();
+        }
+    }
+}
 
 //////////////////////////////////////////////////////////////////
 ////****EXECUTION PART*****///////////////////////////////////////
 //////////////////////////////////////////////////////////////////
 
 //body cube with roundness
-module rounded_cube(__x, __y, __z, __r){
-    translate([0, 0, __r]){
+module rounded_cube(_x, _y, _z, _r){
+    translate([_r, _r, _r]){
         minkowski(){
-            translate([0, 0, (__z*1.1+__r)/2]){
-                    cube([__x - __r*2,
-                  __y - __r*2,
-                  __z*1.1+__r], center=true);
-            }
+            cube([_x-_r*2,
+                  _y-_r*2,
+                  _z-_r*2]);
             roundness_object();
         }
     }
@@ -89,7 +106,7 @@ module rounded_cube(__x, __y, __z, __r){
 
 module inverse_rounded_cube(__x, __y, __z, __r){
     difference(){
-        cube(__x*4, __y*4, __z*4, center = true);
+        cube(__x*5, __y*5, __z*5, center = true);
         rounded_cube(__x, __y, __z, __r);
     }
 }
@@ -97,29 +114,36 @@ module inverse_rounded_cube(__x, __y, __z, __r){
 module top_cut(__x, __y, __z){
     translate([0, 0, __z]){
         _z_size = __z*2;
-
         translate ([0,0, (_z_size)/2]) cube([__x*3, __y*3, _z_size], center=true);
     }
 }
 
-module internal_sections(__internal_sections){
-    for (s = __internal_sections){
-        if (s[0] != undef){
-            echo(body_internal_size_z);
-            section_height = body_internal_size_z*s[3];
+module internal_sections(_internal_sections){
+    for (__s = _internal_sections){
+        if (__s[0] != undef){
+            section_length = __s[2];
             section_width = internal_sections_thickness;
-            section_length = s[2];
+            section_height = body_internal_size_z*__s[3];
             difference(){
-                translate(body_internal_space){
-                    rotate(a = s[1], v = [0,0,1]){
-                        translate([0, 0, section_height/2]) {
-                            cube([section_length, section_width, section_height], center = true);
+//                translate([(0.5 - __s[0][0])*main_body_internal_center.x,
+  //                         (0.5 - __s[0][1])*main_body_internal_center.y,
+    //                       0]){
+                    section_center = [section_length/2.0, section_width/2.0];
+                    translate([body_internal_size_x*__s[0][0],
+                               body_internal_size_y*__s[0][1],
+                               0] - section_center){
+                        translate([section_center.x, section_center.y, section_height/2.0]){
+                            rotate(a = __s[1], v = [0,0,1]){
+                                cube([section_length, section_width, section_height], center = true);
+                            }
                         }
                     }
-                }
+      //          }
                 union(){
                     top_cut(body_size_x, body_size_y, body_size_z);
-                    inverse_rounded_cube(body_size_x, body_size_y, body_size_z, roundness);
+                    inverse_rounded_cube(body_internal_size_x,
+                                         body_internal_size_y,
+                                         body_internal_size_z*1.1+roundness, roundness);
                 }
             }
         }
@@ -145,39 +169,30 @@ module roundness_object(){
     }
 }
 
-module cup(x, y, z, shift = [0, 0, 0]){
-    translate(shift){
+module cup(x, y, z){
+    difference(){
         difference(){
-            difference(){
-                rounded_cube(x, y, z, roundness);
-                top_cut(x, y, z);
-            }
-            //inside cut
-            translate([0, 0, wall_thickness]){
-                translate([0, 0, roundness+(z*1.1+roundness - wall_thickness*2)/2]){
-                    minkowski(){
-                        cube([x - roundness*2 - wall_thickness*2,
-                              y - roundness*2 - wall_thickness*2,
-                              z*1.1+roundness - wall_thickness*2], center=true);
-                        roundness_object();
-                    }
-                }
-            }
+           rounded_cube(x, y, z*1.1+roundness, roundness);
+           top_cut(x, y, z);
+        }
+        //inside cut
+        translate([wall_thickness, wall_thickness, wall_thickness]){
+           rounded_cube(x - wall_thickness*2, y - wall_thickness*2, z*1.1+roundness - wall_thickness*2, roundness);
         }
     }
 }
 
 //body
-//cup(body_size_x, body_size_y, body_size_z);
+main_body_space() {
+    cup(body_size_x, body_size_y, body_size_z);
+}
 
-//lid
-//if (lid==1){
-//    cup(lid_size_x, lid_size_y, lid_size_z, lid_shift);
-//}
+lid_space(){
+    if (lid==1){
+        cup(lid_size_x, lid_size_y, lid_size_z);
+    }
+}
 
-//internal sections
-//internal_sections(internal_sections);
-
-rounded_cube(100, 100, 100, 5);
-
-//top_cut(body_size_x, body_size_y, body_size_z);
+main_body_internal_space(){
+    internal_sections(internal_sections);
+}
