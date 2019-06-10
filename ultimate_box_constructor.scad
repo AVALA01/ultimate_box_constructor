@@ -8,21 +8,20 @@ $fn = 32;
 //0 - no lid
 //1 - yes lid
 lid = 1;
-lid_size_ratio = 0.3;
 
 //size of box in milimeters(openSCAD is unitless, so scale if needed)
-body_size_x = 100;
-body_size_y = 100;
-body_size_z = 100;
+body_size_x = 50;
+body_size_y = 50;
+body_size_z = 50;
 
-wall_thickness = 2; //wall thickness in cm
+wall_thickness = 1; //wall thickness in cm
 
-roundness = 5; //roundness of the box
+roundness = 3; //roundness of the box, it cannot be bigger than 0.7*body_size_z. It will be capped if it exceeds the value.
 
-//0 - whole
-//1 - horizontal
-//2 - x aligned
-//3 - y aligned
+//0 - sphere
+//1 - z axis cylinder
+//2 - x axis cylinder
+//3 - y axis cylinder
 roundness_type = 0;
 
 internal_sections_thickness = 2; //internal sections thickness
@@ -42,11 +41,24 @@ internal_sections = [
 ////****ADVANCED SETTINGS****///////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-//gap between body and lid
+//if 
+
+//z size of the lid in relation to the body
+lid_size_ratio = 0.3;
+
+//horizontal gap between body and lid
 lid_gap = 0.5;
 
 //box type 0 properties
 body_roundness_reducer_multiplyer = 1;
+
+//latch dimensions
+latch_height = 0.3;
+latch_width = 2;
+latch_length_z = body_size_z - (body_size_z*lid_size_ratio)/2.0;
+
+latch_length_x = (body_size_x- roundness*2)/2.0;
+latch_length_y = (body_size_y- roundness*2)/2.0;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////****PRE CALCULATION****/////////////////////////////////////////////////////////////////////////
@@ -61,7 +73,7 @@ main_body_internal_center = [body_internal_size_x/2.0,
 
 lid_size_x = body_size_x + wall_thickness*2 + lid_gap;
 lid_size_y = body_size_y + wall_thickness*2 + lid_gap;
-lid_size_z = body_size_z*lid_size_ratio;
+lid_size_z = body_size_z*lid_size_ratio + roundness;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////****SPACES****//////////////////////////////////////////////////////////////////////////////////
@@ -91,6 +103,24 @@ module main_body_internal_space(){
 ////****MODULES****/////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+//creating latch
+module latch(_position, _length, _orientation){
+//    translate(){
+        rotate(a = _orientation, v = [0, 0, 1]){
+            translate([-_length/2.0, 0, 0]){
+                translate([0, 0, -latch_width/2.0]){
+                    rotate(a = 180, v = [1,0,0]){
+                        rotate(a = 90, v = [0,1,0]){
+                            linear_extrude(height = _length) polygon([[0, 0], [latch_width, 0], [latch_width/2.0, latch_height]]);
+                        }
+                    }
+                }
+            }
+        }
+ //   }
+
+}
+
 //body cube with roundness
 module rounded_cube(_x, _y, _z, _r){
     translate([_r, _r, _r]){
@@ -103,9 +133,9 @@ module rounded_cube(_x, _y, _z, _r){
     }
 }
 
-module inverse_rounded_cube(_x, _y, _z, _r){
+module inverse_rounded_cube(_x, _y, _z, _r, _multiplier = 15){
     difference(){
-        cube(_x*5, _y*5, _z*5, center = true);
+        cube(_x*_multiplier, _y*_multiplier, _z*_multiplier, center = true);
         rounded_cube(_x, _y, _z, _r);
     }
 }
@@ -177,6 +207,10 @@ module cup(_x, _y, _z){
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////****EXECUTION PART****/////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 //body
 main_body_space() {
     cup(body_size_x, body_size_y, body_size_z);
@@ -190,4 +224,9 @@ lid_space(){
 
 main_body_internal_space(){
     internal_sections(internal_sections);
+}
+
+//module latch(_position, _length, _orientation){
+!main_body_space(){
+    latch(0, latch_length_x, 270);
 }
