@@ -1,11 +1,3 @@
-include <lib/simple_box.scad>;
-//x();
-//i = 10;
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-////****MAIN SETTINGS****///////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
 //quality
 $fn = 32;
 
@@ -37,7 +29,7 @@ internal_sections = [
                     //of the section  | sections are |         |         |
                     //                | alligned     |         |         |
                     //                | with x)      |         |         |
-//                        [ [0.5, 0.5],   90,             200,        1 ],
+                        [ [0.5, 0.5],   90,             200,        1 ],
 //                        [ [0.7, 0.7],   10 ,             10,       0.5 ]
                     ];
 
@@ -214,71 +206,3 @@ module cup(_x, _y, _z){
         }
     }
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-////****EXECUTION PART****/////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-//body
-main_body_space() {
-    cup(body_size_x, body_size_y, body_size_z);
-}
-
-lid_space(){
-    if (lid==1){
-        cup(lid_size_x, lid_size_y, lid_size_z);
-    }
-}
-
-main_body_internal_space(){
-    internal_sections(internal_sections);
-}
-
-//latches
-
-//body 
-//0,y/2 latch
-main_body_space(){
-        latch([0, body_size_y/2.0, body_latch_z], body_latch_x, 270);
-}
-
-//x/2,0 latch
-main_body_space(){
-        latch([body_size_x/2.0, 0, body_latch_z], body_latch_x, 0);
-}
-
-//x/2,y latch
-main_body_space(){
-        latch([body_size_x/2.0, body_size_y, body_latch_z], body_latch_x, 180);
-}
-
-//x,y/2 latch
-main_body_space(){
-        latch([body_size_x, body_size_y/2.0, body_latch_z], body_latch_x, 90);
-}
-
-//lid
-if (lid==1){
-    
-    //0,y/2 latch
-    lid_space(){
-        latch([0 + wall_thickness, body_size_y/2.0, lid_latch_z], lid_latch_x, 90);
-    }
-    
-    //x/2,0 latch
-    lid_space(){
-        latch([lid_size_x/2.0, wall_thickness, lid_latch_z], lid_latch_x, 180);
-    }
-    
-    //x/2,y latch
-    lid_space(){
-        latch([lid_size_x/2.0, lid_size_y - wall_thickness, lid_latch_z], body_latch_x, 0);
-    }
-    
-    //x,y/2 latch
-    lid_space(){
-        latch([lid_size_x - wall_thickness, lid_size_y/2.0, lid_latch_z], lid_latch_x, 270);
-    }
-    
-}
-
