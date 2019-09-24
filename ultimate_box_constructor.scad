@@ -8,10 +8,11 @@
 //quality
 $fn = 32;
 
-create_lid = 1; //0 - don't create lid;   1 - create lid
-create_body = 0; //0 - don't create body; 1 - create body
+create_lid = 1;     //0 - don't create lid;   1 - create lid
+create_body = 1;    //0 - don't create body; 1 - create body
+create_latches = 0; //0 - don't create latches; 1 - create latches
 
-body_size_x = 72; //size of box in milimeters(openSCAD is unitless, so scale if needed)
+body_size_x = 142; //size of box in milimeters(openSCAD is unitless, so scale if needed)
 body_size_y = 72; //internal space of the box will be: size - wall_thickness*2
 body_size_z = 72;
 
@@ -26,23 +27,23 @@ roundness = 0; //roundness of the box in mm
 //3 - y axis cylinder
 roundness_type = 0;
 
-//create latch flag
-create_latches = 0;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////****INTERNAL SECTIONS****///////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-internal_sections_thickness = 2; //internal sections thickness
+internal_sections_thickness = 1; //internal sections thickness
 
 internal_sections = [
-                    //relative        | angle        | length  |relative |
-                    //coordinates     | around z     | of the  | height  |
-                    //of the middle   | (by default  | section |         |
-                    //of the section  | sections are |         |         |
-                    //                | alligned     |         |         |
-                    //                | with x)      |         |         |
-                    //  [ [0.5, 0.5],   90,             70,        1],
+                    //relative        | angle        | length  |relative | thicknes |
+                    //coordinates     | around z     | of the  | height  | of the   |
+                    //of the middle   | (by default  | section |         | section  |
+                    //of the section  | sections are |         |         |          |
+                    //                | alligned     |         |         |          |
+                    //                | with x)      |         |         |          |
+                      [ [0.5, 0.5],   0,             200,       1,         10],
+                      [ [0.5, 0.5],   90,             200,      1,         5],
+                      [ [0.5, 0.5],   45,             200,      1],
                     //  [ [0.7, 0.7],   10 ,             10,       0.5 ]
                     ];
 
@@ -51,7 +52,7 @@ internal_sections = [
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //z size of the lid in relation to the body
-lid_size_ratio = 0.02;
+lid_size_ratio = 0.10;
 
 //horizontal gap between body and lid in mm
 lid_gap = 0.50;
@@ -164,7 +165,7 @@ module internal_sections(){
     for (__s = internal_sections){
         if (__s[0] != undef){
             __section_length = __s[2];
-            __section_width = internal_sections_thickness;
+            __section_width = ( (__s[4]==undef) ?  internal_sections_thickness : __s[4]);
             __section_height = body_internal_size_z*__s[3];
             difference(){
                 __section_center = [__section_length/2.0, __section_width/2.0];
@@ -239,24 +240,25 @@ if (create_body){
 //body 
 //0,y/2 latch
 
-    main_body_space(){
-            latch([0, body_size_y/2.0, body_latch_z], body_latch_x, 270);
-    }
-
     if (create_latches){
+        
+        main_body_space(){
+            latch([0, body_size_y/2.0, body_latch_z], body_latch_x, 270);
+        }
+        
         //x/2,0 latch
         main_body_space(){
-                latch([body_size_x/2.0, 0, body_latch_z], body_latch_x, 0);
+            latch([body_size_x/2.0, 0, body_latch_z], body_latch_x, 0);
         }
 
         //x/2,y latch
         main_body_space(){
-                latch([body_size_x/2.0, body_size_y, body_latch_z], body_latch_x, 180);
+            latch([body_size_x/2.0, body_size_y, body_latch_z], body_latch_x, 180);
         }
 
         //x,y/2 latch
         main_body_space(){
-                latch([body_size_x, body_size_y/2.0, body_latch_z], body_latch_x, 90);
+            latch([body_size_x, body_size_y/2.0, body_latch_z], body_latch_x, 90);
         }
         
     }
@@ -271,6 +273,7 @@ if (create_lid==1){
     
     //lid latches
     if (create_latches){
+        
         //0,y/2 latch
         lid_space(){
             latch([0 + wall_thickness, body_size_y/2.0, lid_latch_z], lid_latch_x, 90);
@@ -293,7 +296,3 @@ if (create_lid==1){
     }
     
 }
-
-
-test = [0,1,2,3];
-echo(test[0]);
