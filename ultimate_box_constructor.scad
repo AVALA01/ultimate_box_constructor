@@ -1,32 +1,37 @@
-include <lib/simple_box.scad>;
+//include <lib/simple_box.scad>;
 //x();
 //i = 10;
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
 ////****MAIN SETTINGS****///////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////
 
 //quality
 $fn = 32;
 
-//0 - no lid
-//1 - yes lid
-lid = 1;
+create_lid = 1; //0 - don't create lid;   1 - create lid
+create_body = 0; //0 - don't create body; 1 - create body
 
-//size of box in milimeters(openSCAD is unitless, so scale if needed)
-body_size_x = 50;
-body_size_y = 50;
-body_size_z = 50;
+body_size_x = 72; //size of box in milimeters(openSCAD is unitless, so scale if needed)
+body_size_y = 72; //internal space of the box will be: size - wall_thickness*2
+body_size_z = 72;
 
-wall_thickness = 1; //wall thickness in cm
+wall_thickness = 1; //wall thickness in mm
 
-roundness = 3; //roundness of the box, it cannot be bigger than 0.7*body_size_z. It will be capped if it exceeds the value.
+
+roundness = 0; //roundness of the box in mm
 
 //0 - sphere
 //1 - z axis cylinder
 //2 - x axis cylinder
 //3 - y axis cylinder
 roundness_type = 0;
+
+//create latch flag
+create_latches = 0;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////****INTERNAL SECTIONS****///////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 internal_sections_thickness = 2; //internal sections thickness
 
@@ -37,8 +42,8 @@ internal_sections = [
                     //of the section  | sections are |         |         |
                     //                | alligned     |         |         |
                     //                | with x)      |         |         |
-//                        [ [0.5, 0.5],   90,             200,        1 ],
-//                        [ [0.7, 0.7],   10 ,             10,       0.5 ]
+                    //  [ [0.5, 0.5],   90,             70,        1],
+                    //  [ [0.7, 0.7],   10 ,             10,       0.5 ]
                     ];
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -46,16 +51,16 @@ internal_sections = [
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //z size of the lid in relation to the body
-lid_size_ratio = 0.3;
+lid_size_ratio = 0.02;
 
-//horizontal gap between body and lid
-lid_gap = 0.25;
+//horizontal gap between body and lid in mm
+lid_gap = 0.50;
 
 //box type 0 properties
 body_roundness_reducer_multiplyer = 1;
 
 //latch dimensions
-latch_height = 0.3;
+latch_height = 0.5;
 latch_width = 2;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -210,7 +215,7 @@ module cup(_x, _y, _z){
         }
         //inside cut
         translate([wall_thickness, wall_thickness, wall_thickness]){
-           rounded_cube(_x - wall_thickness*2, _y - wall_thickness*2, _z*1.1+roundness - wall_thickness*2, roundness);
+           rounded_cube(_x - wall_thickness*2, _y - wall_thickness*2, _z*1.1+roundness, roundness);
         }
     }
 }
@@ -219,66 +224,76 @@ module cup(_x, _y, _z){
 ////****EXECUTION PART****/////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-//body
-main_body_space() {
-    cup(body_size_x, body_size_y, body_size_z);
-}
-
-lid_space(){
-    if (lid==1){
-        cup(lid_size_x, lid_size_y, lid_size_z);
+if (create_body){
+    //body
+    main_body_space() {
+        cup(body_size_x, body_size_y, body_size_z);
     }
-}
 
-main_body_internal_space(){
-    internal_sections(internal_sections);
-}
+    main_body_internal_space(){
+        internal_sections(internal_sections);
+    }
 
-//latches
+//body latches
 
 //body 
 //0,y/2 latch
-main_body_space(){
-        latch([0, body_size_y/2.0, body_latch_z], body_latch_x, 270);
-}
 
-//x/2,0 latch
-main_body_space(){
-        latch([body_size_x/2.0, 0, body_latch_z], body_latch_x, 0);
-}
+    main_body_space(){
+            latch([0, body_size_y/2.0, body_latch_z], body_latch_x, 270);
+    }
 
-//x/2,y latch
-main_body_space(){
-        latch([body_size_x/2.0, body_size_y, body_latch_z], body_latch_x, 180);
-}
+    if (create_latches){
+        //x/2,0 latch
+        main_body_space(){
+                latch([body_size_x/2.0, 0, body_latch_z], body_latch_x, 0);
+        }
 
-//x,y/2 latch
-main_body_space(){
-        latch([body_size_x, body_size_y/2.0, body_latch_z], body_latch_x, 90);
+        //x/2,y latch
+        main_body_space(){
+                latch([body_size_x/2.0, body_size_y, body_latch_z], body_latch_x, 180);
+        }
+
+        //x,y/2 latch
+        main_body_space(){
+                latch([body_size_x, body_size_y/2.0, body_latch_z], body_latch_x, 90);
+        }
+        
+    }
 }
 
 //lid
-if (lid==1){
+if (create_lid==1){
     
-    //0,y/2 latch
     lid_space(){
-        latch([0 + wall_thickness, body_size_y/2.0, lid_latch_z], lid_latch_x, 90);
+        cup(lid_size_x, lid_size_y, lid_size_z);
     }
     
-    //x/2,0 latch
-    lid_space(){
-        latch([lid_size_x/2.0, wall_thickness, lid_latch_z], lid_latch_x, 180);
-    }
-    
-    //x/2,y latch
-    lid_space(){
-        latch([lid_size_x/2.0, lid_size_y - wall_thickness, lid_latch_z], body_latch_x, 0);
-    }
-    
-    //x,y/2 latch
-    lid_space(){
-        latch([lid_size_x - wall_thickness, lid_size_y/2.0, lid_latch_z], lid_latch_x, 270);
+    //lid latches
+    if (create_latches){
+        //0,y/2 latch
+        lid_space(){
+            latch([0 + wall_thickness, body_size_y/2.0, lid_latch_z], lid_latch_x, 90);
+        }
+        
+        //x/2,0 latch
+        lid_space(){
+            latch([lid_size_x/2.0, wall_thickness, lid_latch_z], lid_latch_x, 180);
+        }
+        
+        //x/2,y latch
+        lid_space(){
+            latch([lid_size_x/2.0, lid_size_y - wall_thickness, lid_latch_z], body_latch_x, 0);
+        }
+        
+        //x,y/2 latch
+        lid_space(){
+            latch([lid_size_x - wall_thickness, lid_size_y/2.0, lid_latch_z], lid_latch_x, 270);
+        }
     }
     
 }
 
+
+test = [0,1,2,3];
+echo(test[0]);
